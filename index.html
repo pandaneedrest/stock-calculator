@@ -31,156 +31,164 @@
     </script>
     
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
             line-height: 1.6;
             margin: 0;
             padding: 0;
-            background-color: #f5f7fa;
-            min-height: 100vh;
-        }
-        
-        h1, h2, h3 {
+            background-color: #f7f9fc;
             color: #333;
-            margin-bottom: 15px;
         }
         
         .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 15px;
             display: flex;
             flex-direction: row;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-            height: calc(100vh - 80px);
-        }
-        
-        .header {
-            text-align: center;
-            padding: 20px 0;
-            background-color: #fff;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 0;
-        }
-        
-        /* 左侧输入面板 */
-        .input-panel {
-            flex: 0 0 350px;
-            background-color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-right: 20px;
-            overflow-y: auto;
-            height: 100%;
+            background-color: #fff;
+            transition: all 0.3s ease;
         }
         
-        /* 右侧结果面板 */
+        .input-panel {
+            flex: 0 0 300px;
+            padding: 25px;
+            margin-right: 20px;
+            border-radius: 8px;
+            background-color: #f0f4f9;
+            box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+        
         .result-panel {
             flex: 1;
+            padding: 25px;
             overflow-y: auto;
-            height: 100%;
-            display: none; /* 初始隐藏结果面板 */
-        }
-        
-        /* 结果显示时的左右布局样式 */
-        .container.results-active {
-            height: calc(100vh - 80px);
-        }
-        
-        .card {
-            background-color: white;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            padding: 20px;
         }
         
-        .form-group {
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        
+        h3, h4 {
+            color: #2c3e50;
+            margin-top: 20px;
             margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .input-group {
+            margin-bottom: 18px;
         }
         
         label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #34495e;
         }
         
-        input {
+        input[type="number"] {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
+            padding: 10px 12px;
+            border: 1px solid #cfd9e6;
+            border-radius: 6px;
+            background-color: #fff;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        input[type="number"]:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+            outline: none;
         }
         
         button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            display: block;
             width: 100%;
-            margin-top: 10px;
-            transition: background-color 0.3s;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 16px;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         button:hover {
-            background-color: #45a049;
+            background-color: #2980b9;
+        }
+        
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
         
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-gap: 16px;
+            margin-bottom: 25px;
         }
         
         .summary-item {
-            background-color: #f8f9fa;
-            border-radius: 6px;
+            background-color: #fff;
             padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid #eaeff5;
+        }
+        
+        .summary-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .summary-item .label {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 4px;
         }
         
         .summary-item .value {
             font-size: 20px;
-            font-weight: bold;
-            margin: 10px 0;
-            color: #2c3e50;
-        }
-        
-        .summary-item .label {
-            color: #7f8c8d;
-            font-size: 14px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             font-size: 14px;
             table-layout: fixed;
             overflow-x: auto;
+            border-radius: 6px;
+            overflow: hidden;
         }
         
         .table-responsive {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             margin-bottom: 15px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         
         th, td {
-            border: 1px solid #ddd;
+            border: 1px solid #edf2f7;
             padding: 10px;
             text-align: left;
             overflow: hidden;
@@ -189,84 +197,30 @@
         }
         
         th {
-            background-color: #f2f2f2;
-            font-weight: bold;
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: #4a5568;
+            position: sticky;
+            top: 0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
         
         tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: #f9fafb;
         }
         
         tr:hover {
-            background-color: #f1f1f1;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-            margin: 20px 0 30px 0;
-            width: 100%;
-            background-color: #fdfdfd;
-            padding: 10px;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        
-        .chart-container canvas {
-            width: 100% !important;
-            height: 100% !important;
-            max-height: 300px;
-            display: block;
-        }
-        
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #ddd;
-            overflow-x: auto;
-        }
-        
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            background-color: #f2f2f2;
-            border: 1px solid #ddd;
-            border-bottom: none;
-            margin-right: 5px;
-            border-radius: 5px 5px 0 0;
-            white-space: nowrap;
-        }
-        
-        .tab.active {
-            background-color: white;
-            border-bottom: 1px solid white;
-            font-weight: bold;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
+            background-color: #f1f5f9;
         }
         
         .profit-positive {
-            color: #4CAF50;
+            color: #2ecc71;
+            font-weight: 500;
         }
         
         .profit-negative {
-            color: #f44336;
-        }
-        
-        .key-points-list {
-            margin: 15px 0;
-            padding-left: 20px;
-            line-height: 1.8;
-        }
-        
-        .key-points-list li {
-            margin-bottom: 8px;
+            color: #e74c3c;
+            font-weight: 500;
         }
         
         /* 为价格情景表格设置列宽比例 */
@@ -304,7 +258,7 @@
         .break-even-highlight {
             background-color: #fff8e6 !important; /* 浅黄色背景 */
             font-weight: bold;
-            border-left: 3px solid #ffc107; /* 左侧边框加粗并使用醒目颜色 */
+            border-left: 3px solid #f59e0b; /* 左侧边框加粗并使用醒目颜色 */
         }
         
         .break-even-highlight td {
@@ -325,6 +279,90 @@
             opacity: 0.8;
             display: block;
             margin-top: 2px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eaeff5;
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        
+        .tabs::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        
+        .tab {
+            padding: 12px 16px;
+            cursor: pointer;
+            position: relative;
+            color: #718096;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: transparent;
+            transition: background-color 0.2s ease;
+        }
+        
+        .tab.active {
+            color: #3498db;
+        }
+        
+        .tab.active::after {
+            background-color: #3498db;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .key-points-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .key-points-list li {
+            background-color: #fff;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            border-left: 3px solid #3498db;
+        }
+        
+        .key-points-list li strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        
+        .chart-container {
+            height: 300px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         
         @media (max-width: 768px) {
@@ -392,68 +430,119 @@
                 width: 28%;
             }
         }
+        
+        /* 添加通知和加载样式 */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background-color: white;
+            max-width: 350px;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .notification-content {
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .notification-icon {
+            margin-right: 12px;
+            font-size: 24px;
+            display: inline-block;
+        }
+        
+        .notification h4 {
+            margin: 0 0 5px;
+            font-size: 16px;
+        }
+        
+        .notification p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .notification.warning {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .notification.success {
+            border-left: 4px solid #10b981;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        .result-panel {
+            position: relative;
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 <body>
-    <h1 class="header">股票补仓深度分析</h1>
-    
     <div class="container">
-        <!-- 左侧输入面板 -->
         <div class="input-panel">
-            <h2>输入持仓信息</h2>
-            <div class="form-group">
-                <label for="originalPrice">初始买入价格（元/股）</label>
+            <h1>股票补仓计算器</h1>
+            <div class="input-group">
+                <label for="originalPrice">初始买入价格 (元/股)</label>
                 <input type="number" id="originalPrice" step="0.01" placeholder="例如: 100.00">
             </div>
-            
-            <div class="form-group">
-                <label for="originalShares">初始买入股数</label>
+            <div class="input-group">
+                <label for="originalShares">初始买入股数 (股)</label>
                 <input type="number" id="originalShares" placeholder="例如: 100">
             </div>
-            
-            <div class="form-group">
-                <label for="currentPrice">当前股价（元/股）</label>
+            <div class="input-group">
+                <label for="currentPrice">当前股价 (元/股)</label>
                 <input type="number" id="currentPrice" step="0.01" placeholder="例如: 80.00">
             </div>
-            
-            <div class="form-group">
-                <label for="additionalFunds">计划追加资金（元）</label>
+            <div class="input-group">
+                <label for="additionalFunds">计划追加资金 (元)</label>
                 <input type="number" id="additionalFunds" step="0.01" placeholder="例如: 5000.00">
             </div>
-            
-            <button id="analyzeBtn">进行深度分析</button>
+            <button id="analyzeBtn">计算补仓方案</button>
         </div>
         
-        <!-- 右侧结果面板 -->
         <div class="result-panel" id="result">
-            <div class="card">
-                <h2>补仓分析摘要</h2>
-                <div class="summary-grid" id="summary-grid">
-                    <!-- 摘要卡片将在JavaScript中动态生成 -->
-                </div>
+            <h3>补仓分析摘要</h3>
+            <div id="summary-grid" class="summary-grid">
+                <!-- 摘要内容将在JavaScript中动态生成 -->
             </div>
             
-            <div class="card">
-                <div class="tabs">
-                    <div class="tab active" onclick="showTab('basic-analysis')">基础分析</div>
-                    <div class="tab" onclick="showTab('chart-view')">图表展示</div>
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('basic-analysis')">基础分析</div>
+                <div class="tab" onclick="showTab('chart-view')">图表展示</div>
+            </div>
+
+            <div class="tab-content-container">
+                <div id="basic-analysis" class="tab-content active">
+                    <!-- 基础分析内容将在JavaScript中动态生成 -->
                 </div>
                 
-                <div class="tab-content-container">
-                    <div id="basic-analysis" class="tab-content active">
-                        <!-- 基础分析内容将在JavaScript中动态生成 -->
+                <div id="chart-view" class="tab-content">
+                    <h3>投资对比图</h3>
+                    <div class="chart-container">
+                        <canvas id="investmentChart"></canvas>
                     </div>
                     
-                    <div id="chart-view" class="tab-content">
-                        <h3>投资对比图</h3>
-                        <div class="chart-container" style="background-color: #f8f8f8; padding: 15px;">
-                            <canvas id="investmentChart"></canvas>
-                        </div>
-                        
-                        <h3>不同价格下的盈亏图</h3>
-                        <div class="chart-container" style="background-color: #f8f8f8; padding: 15px;">
-                            <canvas id="profitChart"></canvas>
-                        </div>
+                    <h3>不同价格下的盈亏图</h3>
+                    <div class="chart-container">
+                        <canvas id="profitChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -1293,7 +1382,26 @@
             // 检查Chart.js是否加载成功
             if (typeof Chart === 'undefined') {
                 console.error("警告: Chart.js 未能正确加载，图表功能可能不可用");
-                alert("图表库加载失败，部分功能可能不可用。请确保您的网络连接正常并允许加载外部资源。");
+                
+                // 显示用户友好的提示
+                const notification = document.createElement('div');
+                notification.className = 'notification warning';
+                notification.innerHTML = `
+                    <div class="notification-content">
+                        <i class="notification-icon">⚠️</i>
+                        <div>
+                            <h4>图表库加载失败</h4>
+                            <p>部分图表功能可能不可用。请确保您的网络连接正常并允许加载外部资源。</p>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(notification);
+                
+                // 3秒后淡出提示
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    setTimeout(() => notification.remove(), 500);
+                }, 5000);
                 
                 // 尝试再次加载Chart.js
                 var scriptChartJs = document.createElement('script');
@@ -1304,6 +1412,26 @@
                     if (document.getElementById('result').style.display === 'block') {
                         calculateRestocking();
                     }
+                    
+                    // 显示成功提示
+                    const successNotification = document.createElement('div');
+                    successNotification.className = 'notification success';
+                    successNotification.innerHTML = `
+                        <div class="notification-content">
+                            <i class="notification-icon">✓</i>
+                            <div>
+                                <h4>图表库已加载</h4>
+                                <p>图表功能现已可用。</p>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(successNotification);
+                    
+                    // 3秒后淡出提示
+                    setTimeout(() => {
+                        successNotification.style.opacity = '0';
+                        setTimeout(() => successNotification.remove(), 500);
+                    }, 3000);
                 };
                 document.head.appendChild(scriptChartJs);
             } else {
@@ -1315,20 +1443,9 @@
             if (analyzeBtn) {
                 console.log("找到分析按钮，绑定点击事件");
                 // 移除原有可能的事件监听
-                analyzeBtn.removeEventListener('click', calculateRestocking);
+                analyzeBtn.removeEventListener('click', handleAnalysisClick);
                 // 添加新的事件监听
-                analyzeBtn.addEventListener('click', function() {
-                    console.log("按钮被点击，调用计算函数");
-                    
-                    // 显示结果面板
-                    document.getElementById('result').style.display = 'block';
-                    
-                    // 添加激活的左右布局样式
-                    document.querySelector('.container').classList.add('results-active');
-                    
-                    // 执行计算
-                    calculateRestocking();
-                });
+                analyzeBtn.addEventListener('click', handleAnalysisClick);
             } else {
                 console.error("未找到分析按钮");
             }
@@ -1336,12 +1453,47 @@
             // 设置初始状态
             document.getElementById('result').style.display = 'none';
             
+            // 为输入字段添加回车键触发计算
+            const inputFields = document.querySelectorAll('input[type="number"]');
+            inputFields.forEach(input => {
+                input.addEventListener('keyup', function(event) {
+                    if (event.key === 'Enter') {
+                        handleAnalysisClick();
+                    }
+                });
+            });
+            
             // 预填充表单，方便测试
             document.getElementById('originalPrice').value = '100.00';
             document.getElementById('originalShares').value = '100';
             document.getElementById('currentPrice').value = '80.00';
             document.getElementById('additionalFunds').value = '5000.00';
         });
+        
+        // 处理分析按钮点击事件
+        function handleAnalysisClick() {
+            console.log("按钮被点击，调用计算函数");
+            
+            // 添加加载动画
+            const resultPanel = document.getElementById('result');
+            resultPanel.classList.add('loading');
+            
+            // 短暂延迟以显示加载效果
+            setTimeout(() => {
+                // 显示结果面板并带有淡入效果
+                resultPanel.style.display = 'block';
+                resultPanel.style.opacity = '0';
+                
+                // 执行计算
+                calculateRestocking();
+                
+                // 移除加载状态并淡入内容
+                resultPanel.classList.remove('loading');
+                setTimeout(() => {
+                    resultPanel.style.opacity = '1';
+                }, 50);
+            }, 300);
+        }
     </script>
 </body>
 </html> 
