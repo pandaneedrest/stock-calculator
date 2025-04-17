@@ -626,8 +626,6 @@
             const growthNeeded = ((breakEvenPrice - currentPrice) / currentPrice) * 100;
             
             basicAnalysis.innerHTML = `
-                <h3>基础投资分析</h3>
-                
                 <h4>补仓效果</h4>
                 <table>
                     <tr>
@@ -646,19 +644,14 @@
                         <td>当前价 ${formatNumber(currentPrice)} 需涨至 ${formatNumber(breakEvenPrice)}</td>
                     </tr>
                     <tr>
-                        <td>10%收益价格</td>
-                        <td>${formatNumber(breakEvenPrice * 1.1)}</td>
-                        <td>盈利 ${formatNumber(profitAt10Percent)} 元</td>
+                        <td>2%收益价格</td>
+                        <td>${formatNumber(breakEvenPrice * 1.02)}</td>
+                        <td>盈利 ${formatNumber(totalShares * (breakEvenPrice * 1.02 - breakEvenPrice))} 元</td>
                     </tr>
                     <tr>
-                        <td>15%收益价格</td>
-                        <td>${formatNumber(breakEvenPrice * 1.15)}</td>
-                        <td>盈利 ${formatNumber(totalShares * (breakEvenPrice * 1.15 - breakEvenPrice))} 元</td>
-                    </tr>
-                    <tr>
-                        <td>20%收益价格</td>
-                        <td>${formatNumber(breakEvenPrice * 1.2)}</td>
-                        <td>盈利 ${formatNumber(totalShares * (breakEvenPrice * 1.2 - breakEvenPrice))} 元</td>
+                        <td>-2%收益价格</td>
+                        <td>${formatNumber(breakEvenPrice * 0.98)}</td>
+                        <td>亏损 ${formatNumber(totalShares * (breakEvenPrice - breakEvenPrice * 0.98))} 元</td>
                     </tr>
                 </table>
             `;
