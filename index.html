@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票补仓深度分析</title>
+    
+    <!-- 引入 Chart.js（主要CDN） -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- 备用CDN，如果主要CDN失败则使用此CDN -->
+    <script>
+        // 检查Chart对象是否已定义，如果未定义则尝试加载备用CDN
+        window.addEventListener('load', function() {
+            if (typeof Chart === 'undefined') {
+                console.log('尝试加载备用CDN...');
+                var script = document.createElement('script');
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js";
+                script.integrity = "sha512-ElRFoEQdI5Ht6kZvyzXhYG9NqjtkmlkfYk0wr6wHxU9JEHakS7UJZNeml5ALk+8IKlU6jDgMabC3vkumRokgJA==";
+                script.crossOrigin = "anonymous";
+                script.referrerPolicy = "no-referrer";
+                document.head.appendChild(script);
+                
+                // 如果备用CDN也失败，则显示提示
+                script.onerror = function() {
+                    console.error('Chart.js加载失败，将使用可视化备用方案');
+                    alert('图表库无法加载，将只显示表格数据。请检查您的网络连接或稍后再试。');
+                };
+            }
+        });
+    </script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            min-height: 100vh;
+        }
+        
+        h1, h2, h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: row;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            height: calc(100vh - 80px);
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 0;
+        }
+        
+        /* 左侧输入面板 */
+        .input-panel {
+            flex: 0 0 350px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-right: 20px;
+            overflow-y: auto;
+            height: 100%;
+        }
+        
+        /* 右侧结果面板 */
+        .result-panel {
+            flex: 1;
+            overflow-y: auto;
+            height: 100%;
+            display: none; /* 初始隐藏结果面板 */
+        }
+        
+        /* 结果显示时的左右布局样式 */
+        .container.results-active {
+            height: calc(100vh - 80px);
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-item {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .summary-item .value {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #2c3e50;
+        }
+        
+        .summary-item .label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-size: 14px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0 30px 0;
+            width: 100%;
+            background-color: #fdfdfd;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+            max-height: 300px;
+            display: block;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            overflow-x: auto;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f2f2f2;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+            white-space: nowrap;
+        }
+        
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .profit-positive {
+            color: #4CAF50;
+        }
+        
+        .profit-negative {
+            color: #f44336;
+        }
+        
+        .key-points-list {
+            margin: 15px 0;
+            padding-left: 20px;
+            line-height: 1.8;
+        }
+        
+        .key-points-list li {
+            margin-bottom: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            .input-panel {
+                flex: none;
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 20px;
+                height: auto;
+            }
+            .result-panel {
+                flex: none;
+                width: 100%;
+                height: auto;
+            }
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .chart-container {
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="header">股票补仓深度分析</h1>
+    
+    <div class="container">
+        <!-- 左侧输入面板 -->
+        <div class="input-panel">
+            <h2>输入持仓信息</h2>
+            <div class="form-group">
+                <label for="originalPrice">初始买入价格（元/股）</label>
+                <input type="number" id="originalPrice" step="0.01" placeholder="例如: 100.00">
+            </div>
+            
+            <div class="form-group">
+                <label for="originalShares">初始买入股数</label>
+                <input type="number" id="originalShares" placeholder="例如: 100">
+            </div>
+            
+            <div class="form-group">
+                <label for="currentPrice">当前股价（元/股）</label>
+                <input type="number" id="currentPrice" step="0.01" placeholder="例如: 80.00">
+            </div>
+            
+            <div class="form-group">
+                <label for="additionalFunds">计划追加资金（元）</label>
+                <input type="number" id="additionalFunds" step="0.01" placeholder="例如: 5000.00">
+            </div>
+            
+            <button id="analyzeBtn">进行深度分析</button>
+        </div>
+        
+        <!-- 右侧结果面板 -->
+        <div class="result-panel" id="result">
+            <div class="card">
+                <h2>补仓分析摘要</h2>
+                <div class="summary-grid" id="summary-grid">
+                    <!-- 摘要卡片将在JavaScript中动态生成 -->
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab('basic-analysis')">基础分析</div>
+                    <div class="tab" onclick="showTab('risk-analysis')">风险评估</div>
+                    <div class="tab" onclick="showTab('chart-view')">图表展示</div>
+                    <div class="tab" onclick="showTab('price-scenarios')">价格情景</div>
+                </div>
+                
+                <div id="basic-analysis" class="tab-content active">
+                    <!-- 基础分析内容将在JavaScript中动态生成 -->
+                </div>
+                
+                <div id="risk-analysis" class="tab-content">
+                    <!-- 风险分析内容将在JavaScript中动态生成 -->
+                </div>
+                
+                <div id="chart-view" class="tab-content">
+                    <h3>投资对比图</h3>
+                    <div class="chart-container" style="background-color: #f8f8f8; padding: 15px;">
+                        <canvas id="investmentChart"></canvas>
+                    </div>
+                    
+                    <h3>不同价格下的盈亏图</h3>
+                    <div class="chart-container" style="background-color: #f8f8f8; padding: 15px;">
+                        <canvas id="profitChart"></canvas>
+                    </div>
+                </div>
+                
+                <div id="price-scenarios" class="tab-content">
+                    <!-- 价格情景分析内容将在JavaScript中动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 标签页切换函数
+        function showTab(tabId) {
+            // 隐藏所有标签页内容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 取消所有标签的active状态
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 激活选择的标签页
+            document.getElementById(tabId).classList.add('active');
+            
+            // 找到对应的标签并激活
+            document.querySelectorAll('.tab').forEach(tab => {
+                if (tab.getAttribute('onclick') === `showTab('${tabId}')`) {
+                    tab.classList.add('active');
+                }
+            });
+        }
+
+        // 格式化数字显示
+        function formatNumber(num) {
+            if (isNaN(num)) return "0.00";
+            return new Intl.NumberFormat('zh-CN').format(parseFloat(num).toFixed(2));
+        }
+
+        // 生成价格区间点
+        function generatePricePoints(originalPrice, currentPrice, averageCost) {
+            // 基础价格点
+            let pricePoints = [
+                currentPrice * 0.5,
+                currentPrice * 0.7,
+                currentPrice * 0.8,
+                currentPrice * 0.9,
+                currentPrice,
+                currentPrice * 1.1,
+                currentPrice * 1.2,
+                currentPrice * 1.3,
+                currentPrice * 1.5,
+                averageCost * 0.7,
+                averageCost * 0.8,
+                averageCost * 0.9,
+                averageCost,
+                averageCost * 1.1,
+                averageCost * 1.2,
+                averageCost * 1.5,
+                originalPrice * 0.7,
+                originalPrice * 0.8,
+                originalPrice * 0.9,
+                originalPrice,
+                originalPrice * 1.1
+            ];
+            
+            // 去重并排序
+            return [...new Set(pricePoints)].sort((a, b) => a - b);
+        }
+        
+        // 主计算函数
+        function calculateRestocking() {
+            console.log("开始计算补仓分析...");
+            
+            // 获取输入值
+            const originalPrice = parseFloat(document.getElementById('originalPrice').value);
+            const originalShares = parseInt(document.getElementById('originalShares').value);
+            const currentPrice = parseFloat(document.getElementById('currentPrice').value);
+            const additionalFunds = parseFloat(document.getElementById('additionalFunds').value);
+            
+            console.log("输入值：", {originalPrice, originalShares, currentPrice, additionalFunds});
+            
+            // 验证输入
+            if (isNaN(originalPrice) || isNaN(originalShares) || isNaN(currentPrice) || isNaN(additionalFunds)) {
+                alert('请填写所有输入项！');
+                return;
+            }
+            
+            if (originalPrice <= 0 || originalShares <= 0 || currentPrice <= 0 || additionalFunds <= 0) {
+                alert('所有输入值必须大于零！');
+                return;
+            }
+            
+            try {
+                // 计算
+                const initialInvestment = originalPrice * originalShares;
+                const additionalShares = Math.floor(additionalFunds / currentPrice);
+                const additionalInvestment = additionalShares * currentPrice;
+                const remainingFunds = additionalFunds - additionalInvestment;
+                
+                const totalShares = originalShares + additionalShares;
+                const totalInvestment = initialInvestment + additionalInvestment;
+                const averageCost = totalInvestment / totalShares;
+                
+                const breakEvenPrice = averageCost;
+                const profitAt10Percent = totalShares * (breakEvenPrice * 1.1 - breakEvenPrice);
+                
+                // 计算当前亏损比例
+                const currentLoss = (currentPrice - originalPrice) / originalPrice * 100;
+                
+                console.log("基础计算结果：", {
+                    initialInvestment,
+                    additionalShares,
+                    additionalInvestment,
+                    totalShares,
+                    totalInvestment,
+                    averageCost,
+                    currentLoss
+                });
+                
+                // 计算多个价格点下的盈亏情况
+                const pricePoints = generatePricePoints(originalPrice, currentPrice, averageCost);
+                
+                // 填充摘要区域
+                fillSummaryArea(initialInvestment, additionalInvestment, currentPrice, originalPrice, 
+                                averageCost, totalShares, remainingFunds, currentLoss);
+                
+                // 填充基础分析区域
+                fillBasicAnalysis(initialInvestment, additionalInvestment, originalPrice, currentPrice, 
+                                originalShares, additionalShares, totalShares, totalInvestment, 
+                                averageCost, breakEvenPrice, profitAt10Percent);
+                
+                // 填充风险分析区域
+                fillRiskAnalysis(originalPrice, currentPrice, averageCost, totalInvestment, totalShares);
+                
+                // 填充价格情景区域
+                fillPriceScenarios(pricePoints, totalShares, totalInvestment);
+                
+                try {
+                    console.log("开始绘制图表...");
+                    // 绘制图表
+                    drawInvestmentChart(initialInvestment, additionalInvestment);
+                    drawProfitChart(pricePoints, totalShares, totalInvestment);
+                    console.log("图表绘制完成");
+                } catch (chartError) {
+                    console.error("图表绘制出错：", chartError);
+                    alert("图表绘制失败，但分析结果仍然有效。请检查控制台获取详细信息。");
+                }
+                
+                // 在左右布局中，结果面板始终显示，不需要特别设置display
+                // 但为了确保可见性，仍然保留此行
+                document.getElementById('result').style.display = 'block';
+                
+                console.log("分析完成，已显示结果");
+            } catch (error) {
+                console.error("计算过程中发生错误：", error);
+                alert("计算过程中发生错误，请检查输入并重试");
+            }
+        }
+        
+        // 填充摘要区域
+        function fillSummaryArea(initialInvestment, additionalInvestment, currentPrice, originalPrice, 
+                                averageCost, totalShares, remainingFunds, currentLoss) {
+            const summaryGrid = document.getElementById('summary-grid');
+            
+            // 清空现有内容
+            summaryGrid.innerHTML = '';
+            
+            // 添加摘要卡片
+            const summaryItems = [
+                { label: '初始成本价', value: `${formatNumber(originalPrice)} 元`, subtitle: '首次买入价格' },
+                { label: '当前股价', value: `${formatNumber(currentPrice)} 元`, subtitle: `${currentLoss.toFixed(2)}%` },
+                { label: '补仓后成本价', value: `${formatNumber(averageCost)} 元`, subtitle: '加权平均成本' },
+                { label: '投资金额', value: `${formatNumber(initialInvestment + additionalInvestment)} 元`, subtitle: '总投入资金' },
+                { label: '持股数量', value: `${totalShares} 股`, subtitle: '总持仓数量' },
+                { label: '剩余资金', value: `${formatNumber(remainingFunds)} 元`, subtitle: '补仓后剩余' }
+            ];
+            
+            summaryItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'summary-item';
+                
+                // 对于当前股价，添加颜色
+                const valueClass = item.label === '当前股价' ? 
+                    (currentLoss < 0 ? 'profit-negative' : 'profit-positive') : '';
+                    
+                const subtitleClass = item.label === '当前股价' ? 
+                    (currentLoss < 0 ? 'profit-negative' : 'profit-positive') : '';
+                
+                itemDiv.innerHTML = `
+                    <div class="label">${item.label}</div>
+                    <div class="value ${valueClass}">${item.value}</div>
+                    <div class="label ${subtitleClass}">${item.subtitle}</div>
+                `;
+                
+                summaryGrid.appendChild(itemDiv);
+            });
+        }
+        
+        // 填充基础分析区域
+        function fillBasicAnalysis(initialInvestment, additionalInvestment, originalPrice, currentPrice, 
+                                   originalShares, additionalShares, totalShares, totalInvestment, 
+                                   averageCost, breakEvenPrice, profitAt10Percent) {
+            const basicAnalysis = document.getElementById('basic-analysis');
+            
+            // 计算成本降低比例
+            const costReduction = ((originalPrice - averageCost) / originalPrice) * 100;
+            
+            // 计算补仓比例
+            const additionalRatio = (additionalInvestment / (initialInvestment + additionalInvestment)) * 100;
+            
+            // 计算目标回本所需涨幅
+            const growthNeeded = ((breakEvenPrice - currentPrice) / currentPrice) * 100;
+            
+            basicAnalysis.innerHTML = `
+                <h3>基础投资分析</h3>
+                
+                <h4>投资明细</h4>
+                <table>
+                    <tr>
+                        <th>项目</th>
+                        <th>金额（元）</th>
+                        <th>股数</th>
+                        <th>单价（元/股）</th>
+                        <th>占比</th>
+                    </tr>
+                    <tr>
+                        <td>初始投资</td>
+                        <td>${formatNumber(initialInvestment)}</td>
+                        <td>${originalShares}</td>
+                        <td>${formatNumber(originalPrice)}</td>
+                        <td>${(100 - additionalRatio).toFixed(2)}%</td>
+                    </tr>
+                    <tr>
+                        <td>补仓投资</td>
+                        <td>${formatNumber(additionalInvestment)}</td>
+                        <td>${additionalShares}</td>
+                        <td>${formatNumber(currentPrice)}</td>
+                        <td>${additionalRatio.toFixed(2)}%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>合计</strong></td>
+                        <td><strong>${formatNumber(totalInvestment)}</strong></td>
+                        <td><strong>${totalShares}</strong></td>
+                        <td><strong>${formatNumber(averageCost)}</strong></td>
+                        <td><strong>100%</strong></td>
+                    </tr>
+                </table>
+                
+                <h4>补仓效果</h4>
+                <table>
+                    <tr>
+                        <th>指标</th>
+                        <th>数值</th>
+                        <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>成本降低</td>
+                        <td>${costReduction.toFixed(2)}%</td>
+                        <td>从 ${formatNumber(originalPrice)} 降低到 ${formatNumber(averageCost)}</td>
+                    </tr>
+                    <tr>
+                        <td>回本涨幅</td>
+                        <td>${growthNeeded.toFixed(2)}%</td>
+                        <td>当前价 ${formatNumber(currentPrice)} 需涨至 ${formatNumber(breakEvenPrice)}</td>
+                    </tr>
+                    <tr>
+                        <td>10%收益价格</td>
+                        <td>${formatNumber(breakEvenPrice * 1.1)}</td>
+                        <td>盈利 ${formatNumber(profitAt10Percent)} 元</td>
+                    </tr>
+                    <tr>
+                        <td>15%收益价格</td>
+                        <td>${formatNumber(breakEvenPrice * 1.15)}</td>
+                        <td>盈利 ${formatNumber(totalShares * (breakEvenPrice * 1.15 - breakEvenPrice))} 元</td>
+                    </tr>
+                    <tr>
+                        <td>20%收益价格</td>
+                        <td>${formatNumber(breakEvenPrice * 1.2)}</td>
+                        <td>盈利 ${formatNumber(totalShares * (breakEvenPrice * 1.2 - breakEvenPrice))} 元</td>
+                    </tr>
+                </table>
+            `;
+        }
+        
+        // 填充风险分析区域
+        function fillRiskAnalysis(originalPrice, currentPrice, averageCost, totalInvestment, totalShares) {
+            const riskAnalysis = document.getElementById('risk-analysis');
+            
+            // 计算最大风险和收益点
+            const maxLoss = totalInvestment; // 最坏情况，股价为0
+            const currentValue = totalShares * currentPrice;
+            const currentLoss = currentValue - totalInvestment;
+            const maxLossPercent = -100; // 最坏情况，股价为0，亏损100%
+            
+            // 计算每一个下跌场景
+            const drop10Price = currentPrice * 0.9;
+            const drop10Value = totalShares * drop10Price;
+            const drop10Profit = drop10Value - totalInvestment;
+            const drop10Percentage = (drop10Profit / totalInvestment) * 100;
+            
+            const drop20Price = currentPrice * 0.8;
+            const drop20Value = totalShares * drop20Price;
+            const drop20Profit = drop20Value - totalInvestment;
+            const drop20Percentage = (drop20Profit / totalInvestment) * 100;
+            
+            const drop30Price = currentPrice * 0.7;
+            const drop30Value = totalShares * drop30Price;
+            const drop30Profit = drop30Value - totalInvestment;
+            const drop30Percentage = (drop30Profit / totalInvestment) * 100;
+            
+            const drop50Price = currentPrice * 0.5;
+            const drop50Value = totalShares * drop50Price;
+            const drop50Profit = drop50Value - totalInvestment;
+            const drop50Percentage = (drop50Profit / totalInvestment) * 100;
+            
+            riskAnalysis.innerHTML = `
+                <h3>风险评估分析</h3>
+                
+                <h4>风险指标</h4>
+                <table>
+                    <tr>
+                        <th>指标</th>
+                        <th>数值</th>
+                        <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>当前状态</td>
+                        <td class="${currentLoss < 0 ? 'profit-negative' : 'profit-positive'}">${formatNumber(currentLoss)} 元</td>
+                        <td>当前市值 ${formatNumber(currentValue)} 元</td>
+                    </tr>
+                    <tr>
+                        <td>最大亏损风险</td>
+                        <td class="profit-negative">${formatNumber(maxLoss)} 元</td>
+                        <td>${maxLossPercent}% (极端情况)</td>
+                    </tr>
+                    <tr>
+                        <td>回到初始成本</td>
+                        <td>${formatNumber((originalPrice - currentPrice) / currentPrice * 100)}%</td>
+                        <td>股价需回升至 ${formatNumber(originalPrice)} 元</td>
+                    </tr>
+                </table>
+                
+                <h4>股价下跌风险</h4>
+                <table>
+                    <tr>
+                        <th>下跌幅度</th>
+                        <th>对应股价</th>
+                        <th>总市值</th>
+                        <th>亏损金额</th>
+                        <th>亏损比例</th>
+                    </tr>
+                    <tr>
+                        <td>-10%</td>
+                        <td>${formatNumber(drop10Price)}</td>
+                        <td>${formatNumber(drop10Value)}</td>
+                        <td class="profit-negative">${formatNumber(drop10Profit)}</td>
+                        <td class="profit-negative">${drop10Percentage.toFixed(2)}%</td>
+                    </tr>
+                    <tr>
+                        <td>-20%</td>
+                        <td>${formatNumber(drop20Price)}</td>
+                        <td>${formatNumber(drop20Value)}</td>
+                        <td class="profit-negative">${formatNumber(drop20Profit)}</td>
+                        <td class="profit-negative">${drop20Percentage.toFixed(2)}%</td>
+                    </tr>
+                    <tr>
+                        <td>-30%</td>
+                        <td>${formatNumber(drop30Price)}</td>
+                        <td>${formatNumber(drop30Value)}</td>
+                        <td class="profit-negative">${formatNumber(drop30Profit)}</td>
+                        <td class="profit-negative">${drop30Percentage.toFixed(2)}%</td>
+                    </tr>
+                    <tr>
+                        <td>-50%</td>
+                        <td>${formatNumber(drop50Price)}</td>
+                        <td>${formatNumber(drop50Value)}</td>
+                        <td class="profit-negative">${formatNumber(drop50Profit)}</td>
+                        <td class="profit-negative">${drop50Percentage.toFixed(2)}%</td>
+                    </tr>
+                </table>
+                
+                <h4>止损与风险控制建议</h4>
+                <ul class="key-points-list">
+                    <li>
+                        <strong>建议止损位：</strong> ${formatNumber(averageCost * 0.8)} 元
+                        <div>置于平均成本下方20%位置，以控制最大亏损规模</div>
+                    </li>
+                    <li>
+                        <strong>最大风险敞口：</strong> ${formatNumber(totalInvestment * 0.2)} 元 (总投资的20%)
+                        <div>遵循止损策略可将最大损失控制在此范围内</div>
+                    </li>
+                    <li>
+                        <strong>仓位控制：</strong> 补仓后总投资 ${formatNumber(totalInvestment)} 元
+                        <div>建议单一股票仓位不超过总资产的30%，降低集中度风险</div>
+                    </li>
+                    <li>
+                        <strong>分批减仓策略：</strong> 回到盈亏平衡点后，考虑分批减仓以降低持仓风险
+                        <div>可设置在不同价格点的卖出提醒，避免因贪婪而错过获利机会</div>
+                    </li>
+                </ul>
+            `;
+        }
+        
+        // 填充价格情景区域
+        function fillPriceScenarios(pricePoints, totalShares, totalInvestment) {
+            const priceScenarios = document.getElementById('price-scenarios');
+            
+            // 计算关键价格点
+            const avgCost = totalInvestment / totalShares;
+            const breakEvenPrice = avgCost;
+            
+            // 选择特定的价格点进行展示
+            const targetPrices = [
+                // 亏损区域
+                avgCost * 0.5,  // -50%
+                avgCost * 0.7,  // -30%
+                avgCost * 0.8,  // -20%
+                avgCost * 0.9,  // -10%
+                // 盈亏平衡
+                avgCost,        // 0%
+                // 盈利区域
+                avgCost * 1.04, // 小幅盈利
+                avgCost * 1.1,  // 10%
+                avgCost * 1.2,  // 20%
+                avgCost * 1.3,  // 30%
+                avgCost * 1.5   // 50%
+            ];
+            
+            // 表格首部
+            let tableHTML = `
+                <h3>价格情景分析</h3>
+                <p>以下表格展示了关键股价水平下的盈亏情况：</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>股价（元）</th>
+                            <th>总市值（元）</th>
+                            <th>盈亏金额（元）</th>
+                            <th>盈亏比例</th>
+                            <th>情景描述</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // 为每个价格点创建表格行
+            targetPrices.forEach(price => {
+                const totalValue = totalShares * price;
+                const profit = totalValue - totalInvestment;
+                const profitPercentage = (profit / totalInvestment) * 100;
+                
+                // 设置情景描述
+                let scenarioDesc = '';
+                if (profitPercentage <= -50) {
+                    scenarioDesc = '严重亏损';
+                } else if (profitPercentage <= -20) {
+                    scenarioDesc = '重度亏损';
+                } else if (profitPercentage <= -10) {
+                    scenarioDesc = '中度亏损';
+                } else if (profitPercentage < 0) {
+                    scenarioDesc = '轻度亏损';
+                } else if (profitPercentage < 10) {
+                    scenarioDesc = '小幅盈利';
+                } else if (profitPercentage < 20) {
+                    scenarioDesc = '中等盈利';
+                } else if (profitPercentage < 50) {
+                    scenarioDesc = '较大盈利';
+                } else {
+                    scenarioDesc = '高额盈利';
+                }
+                
+                // 生成表格行HTML
+                tableHTML += `
+                    <tr>
+                        <td>${formatNumber(price)}</td>
+                        <td>${formatNumber(totalValue)}</td>
+                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${formatNumber(profit)}</td>
+                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${profitPercentage.toFixed(2)}%</td>
+                        <td>${scenarioDesc}</td>
+                    </tr>
+                `;
+            });
+            
+            // 表格尾部
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            // 设置内容
+            priceScenarios.innerHTML = tableHTML;
+            
+            // 计算关键价格点的数值
+            const profit10PercentPrice = avgCost * 1.1;
+            const profit20PercentPrice = avgCost * 1.2;
+            const stopLossPrice = avgCost * 0.8;
+            
+            // 添加额外的价格点分析说明
+            priceScenarios.innerHTML += `
+                <div style="margin-top: 20px;">
+                    <h4>关键价格点分析</h4>
+                    <ol class="key-points-list">
+                        <li>
+                            <strong>止损位：${formatNumber(stopLossPrice)} 元</strong>
+                            <div>低于此价格建议止损，避免更大亏损。亏损比例：-20%</div>
+                        </li>
+                        <li>
+                            <strong>盈亏平衡点：${formatNumber(breakEvenPrice)} 元</strong>
+                            <div>达到此价格可收回全部投资，总盈亏为0</div>
+                        </li>
+                        <li>
+                            <strong>10%获利点：${formatNumber(profit10PercentPrice)} 元</strong>
+                            <div>达到此价格可获得10%收益，盈利 ${formatNumber(totalInvestment * 0.1)} 元</div>
+                        </li>
+                        <li>
+                            <strong>20%获利点：${formatNumber(profit20PercentPrice)} 元</strong>
+                            <div>达到此价格可获得20%收益，盈利 ${formatNumber(totalInvestment * 0.2)} 元</div>
+                        </li>
+                    </ol>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4>补仓策略建议</h4>
+                    <ul class="key-points-list">
+                        <li>
+                            <strong>资金管理</strong>：补仓后总投入为 ${formatNumber(totalInvestment)} 元，建议不超过可投资金的30%
+                        </li>
+                        <li>
+                            <strong>止损策略</strong>：设置在平均成本 ${formatNumber(breakEvenPrice)} 元下方20%，即 ${formatNumber(stopLossPrice)} 元
+                        </li>
+                        <li>
+                            <strong>获利策略</strong>：可考虑在达到10%收益时减持30%，20%收益时减持50%
+                        </li>
+                        <li>
+                            <strong>持仓时间</strong>：预期回本时间视市场情况，短期内股价大幅上涨概率不高，建议做好中长期持有准备
+                        </li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        // 选取关键价格点函数
+        function getKeyPricePoints(pricePoints, totalShares, totalInvestment) {
+            const keyPoints = [];
+            const breakEvenPrice = totalInvestment / totalShares;
+            
+            // 添加一些预设百分比的价格点
+            const percentages = [-50, -30, -20, -10, -5, 0, 5, 10, 20, 30, 50];
+            
+            percentages.forEach(percentage => {
+                // 从盈亏平衡点计算特定盈亏百分比的价格
+                const targetPrice = breakEvenPrice * (1 + percentage / 100);
+                
+                // 寻找最接近的实际价格点
+                const closestPrice = findClosestPrice(pricePoints, targetPrice);
+                if (closestPrice !== null) {
+                    keyPoints.push(closestPrice);
+                }
+            });
+            
+            return keyPoints;
+        }
+        
+        // 查找最接近目标价格的价格点
+        function findClosestPrice(pricePoints, targetPrice) {
+            if (pricePoints.length === 0) return null;
+            
+            return pricePoints.reduce((prev, curr) => {
+                return (Math.abs(curr - targetPrice) < Math.abs(prev - targetPrice)) ? curr : prev;
+            });
+        }
+        
+        // 绘制投资对比图
+        function drawInvestmentChart(initialInvestment, additionalInvestment) {
+            try {
+                const canvas = document.getElementById('investmentChart');
+                if (!canvas) {
+                    console.error("找不到投资图表的canvas元素");
+                    return;
+                }
+                
+                // 清除之前的内容
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 确保Canvas尺寸正确设置
+                ensureCanvasDimensions(canvas);
+                
+                // 确保Chart对象存在
+                if (typeof Chart === 'undefined') {
+                    console.error("Chart.js未正确加载");
+                    
+                    // 创建替代显示（当Chart不可用时）
+                    createFallbackInvestmentDisplay(initialInvestment, additionalInvestment);
+                    return;
+                }
+                
+                // 销毁之前的图表（如果存在）
+                if (window.investmentChart instanceof Chart) {
+                    window.investmentChart.destroy();
+                }
+                
+                console.log("创建投资饼图", {initialInvestment, additionalInvestment});
+                
+                window.investmentChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['初始投资', '补仓投资'],
+                        datasets: [{
+                            data: [initialInvestment, additionalInvestment],
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(75, 192, 192, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(75, 192, 192, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                display: true
+                            },
+                            tooltip: {
+                                enabled: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        let value = context.raw || 0;
+                                        let percentage = (value / (initialInvestment + additionalInvestment) * 100).toFixed(2);
+                                        return `${label}: ${formatNumber(value)} 元 (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("绘制投资饼图时出错：", error);
+                createFallbackInvestmentDisplay(initialInvestment, additionalInvestment);
+            }
+        }
+        
+        // 新增函数：确保Canvas的尺寸正确设置
+        function ensureCanvasDimensions(canvas) {
+            if (!canvas) return;
+            
+            const container = canvas.parentNode;
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight || 250;
+            
+            // 设置canvas的宽高
+            canvas.width = containerWidth - 30; // 减去padding
+            canvas.height = containerHeight - 30;
+            
+            console.log(`设置canvas尺寸: ${canvas.width} x ${canvas.height}`);
+            
+            // 确保Canvas正确显示
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            canvas.style.maxHeight = '250px';
+            canvas.style.display = 'block';
+        }
+        
+        // Chart.js不可用时的替代投资饼图显示
+        function createFallbackInvestmentDisplay(initialInvestment, additionalInvestment) {
+            const container = document.getElementById('investmentChart').parentNode;
+            
+            // 清空容器
+            container.innerHTML = '<h4>投资对比 (备用显示)</h4>';
+            
+            // 计算百分比
+            const totalInvestment = initialInvestment + additionalInvestment;
+            const initialPercentage = (initialInvestment / totalInvestment * 100).toFixed(2);
+            const additionalPercentage = (additionalInvestment / totalInvestment * 100).toFixed(2);
+            
+            // 创建条形图显示
+            const barContainer = document.createElement('div');
+            barContainer.style.width = '100%';
+            barContainer.style.height = '40px';
+            barContainer.style.marginTop = '20px';
+            barContainer.style.display = 'flex';
+            barContainer.style.borderRadius = '4px';
+            barContainer.style.overflow = 'hidden';
+            
+            // 初始投资条
+            const initialBar = document.createElement('div');
+            initialBar.style.width = `${initialPercentage}%`;
+            initialBar.style.height = '100%';
+            initialBar.style.backgroundColor = 'rgba(54, 162, 235, 0.7)';
+            initialBar.style.display = 'flex';
+            initialBar.style.alignItems = 'center';
+            initialBar.style.justifyContent = 'center';
+            initialBar.style.color = 'white';
+            initialBar.style.fontWeight = 'bold';
+            if (initialPercentage > 10) {
+                initialBar.textContent = `${initialPercentage}%`;
+            }
+            
+            // 补仓投资条
+            const additionalBar = document.createElement('div');
+            additionalBar.style.width = `${additionalPercentage}%`;
+            additionalBar.style.height = '100%';
+            additionalBar.style.backgroundColor = 'rgba(75, 192, 192, 0.7)';
+            additionalBar.style.display = 'flex';
+            additionalBar.style.alignItems = 'center';
+            additionalBar.style.justifyContent = 'center';
+            additionalBar.style.color = 'white';
+            additionalBar.style.fontWeight = 'bold';
+            if (additionalPercentage > 10) {
+                additionalBar.textContent = `${additionalPercentage}%`;
+            }
+            
+            barContainer.appendChild(initialBar);
+            barContainer.appendChild(additionalBar);
+            container.appendChild(barContainer);
+            
+            // 添加图例
+            const legend = document.createElement('div');
+            legend.style.display = 'flex';
+            legend.style.justifyContent = 'center';
+            legend.style.marginTop = '15px';
+            legend.style.gap = '20px';
+            
+            // 初始投资图例
+            const initialLegend = document.createElement('div');
+            initialLegend.style.display = 'flex';
+            initialLegend.style.alignItems = 'center';
+            initialLegend.style.gap = '5px';
+            
+            const initialColor = document.createElement('div');
+            initialColor.style.width = '20px';
+            initialColor.style.height = '20px';
+            initialColor.style.backgroundColor = 'rgba(54, 162, 235, 0.7)';
+            initialColor.style.borderRadius = '3px';
+            
+            const initialText = document.createElement('span');
+            initialText.textContent = `初始投资: ${formatNumber(initialInvestment)} 元 (${initialPercentage}%)`;
+            
+            initialLegend.appendChild(initialColor);
+            initialLegend.appendChild(initialText);
+            
+            // 补仓投资图例
+            const additionalLegend = document.createElement('div');
+            additionalLegend.style.display = 'flex';
+            additionalLegend.style.alignItems = 'center';
+            additionalLegend.style.gap = '5px';
+            
+            const additionalColor = document.createElement('div');
+            additionalColor.style.width = '20px';
+            additionalColor.style.height = '20px';
+            additionalColor.style.backgroundColor = 'rgba(75, 192, 192, 0.7)';
+            additionalColor.style.borderRadius = '3px';
+            
+            const additionalText = document.createElement('span');
+            additionalText.textContent = `补仓投资: ${formatNumber(additionalInvestment)} 元 (${additionalPercentage}%)`;
+            
+            additionalLegend.appendChild(additionalColor);
+            additionalLegend.appendChild(additionalText);
+            
+            legend.appendChild(initialLegend);
+            legend.appendChild(additionalLegend);
+            container.appendChild(legend);
+        }
+        
+        // 绘制盈亏图表
+        function drawProfitChart(pricePoints, totalShares, totalInvestment) {
+            try {
+                const canvas = document.getElementById('profitChart');
+                if (!canvas) {
+                    console.error("找不到盈亏图表的canvas元素");
+                    return;
+                }
+                
+                // 清除之前的内容
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 确保Canvas尺寸正确设置
+                ensureCanvasDimensions(canvas);
+                
+                // 确保Chart对象存在
+                if (typeof Chart === 'undefined') {
+                    console.error("Chart.js未正确加载");
+                    
+                    // 创建替代显示（当Chart不可用时）
+                    createFallbackProfitDisplay(pricePoints, totalShares, totalInvestment);
+                    return;
+                }
+                
+                // 计算指定价格点下的盈亏值
+                const profitValues = pricePoints.map(price => {
+                    const totalValue = price * totalShares;
+                    return totalValue - totalInvestment;
+                });
+                
+                // 销毁之前的图表（如果存在）
+                if (window.profitChart instanceof Chart) {
+                    window.profitChart.destroy();
+                }
+                
+                console.log("创建盈亏曲线图", {pricePoints: pricePoints.length, totalShares, totalInvestment});
+                
+                // 找到盈亏平衡点的索引
+                let breakEvenIndex = 0;
+                for (let i = 0; i < profitValues.length; i++) {
+                    if (profitValues[i] >= 0) {
+                        breakEvenIndex = i;
+                        break;
+                    }
+                }
+                
+                // 筛选价格点，避免图表过于拥挤
+                let filteredPricePoints = [];
+                let filteredProfitValues = [];
+                
+                // 根据数据量进行抽样，最多显示15个点
+                const step = Math.max(1, Math.floor(pricePoints.length / 15));
+                for (let i = 0; i < pricePoints.length; i += step) {
+                    filteredPricePoints.push(pricePoints[i]);
+                    filteredProfitValues.push(profitValues[i]);
+                }
+                
+                // 确保包含盈亏平衡点
+                if (!filteredPricePoints.includes(pricePoints[breakEvenIndex])) {
+                    filteredPricePoints.push(pricePoints[breakEvenIndex]);
+                    filteredProfitValues.push(profitValues[breakEvenIndex]);
+                    
+                    // 重新排序
+                    const combinedArray = filteredPricePoints.map((price, i) => {
+                        return { price: price, profit: filteredProfitValues[i] };
+                    });
+                    
+                    combinedArray.sort((a, b) => a.price - b.price);
+                    
+                    filteredPricePoints = combinedArray.map(item => item.price);
+                    filteredProfitValues = combinedArray.map(item => item.profit);
+                }
+                
+                window.profitChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: filteredPricePoints.map(price => price.toFixed(2)),
+                        datasets: [{
+                            label: '盈亏金额（元）',
+                            data: filteredProfitValues,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            pointBackgroundColor: function(context) {
+                                const value = context.dataset.data[context.dataIndex];
+                                return value < 0 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)';
+                            },
+                            pointRadius: 5,
+                            fill: true,
+                            tension: 0.1,
+                            segment: {
+                                borderColor: function(context) {
+                                    if (!context.p1.parsed) return;
+                                    return context.p1.parsed.y < 0 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)';
+                                }
+                            }
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                enabled: true,
+                                callbacks: {
+                                    title: function(context) {
+                                        return `股价: ${context[0].label} 元`;
+                                    },
+                                    label: function(context) {
+                                        const profit = context.parsed.y;
+                                        const profitPercentage = (profit / totalInvestment * 100).toFixed(2);
+                                        return `盈亏: ${formatNumber(profit)} 元 (${profitPercentage}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: function(context) {
+                                        if (context.tick.value === 0) {
+                                            return 'rgba(0, 0, 0, 0.5)';
+                                        }
+                                        return 'rgba(0, 0, 0, 0.1)';
+                                    },
+                                    lineWidth: function(context) {
+                                        if (context.tick.value === 0) {
+                                            return 2;
+                                        }
+                                        return 1;
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("绘制盈亏曲线图时出错：", error);
+                createFallbackProfitDisplay(pricePoints, totalShares, totalInvestment);
+            }
+        }
+        
+        // Chart.js不可用时的替代表格显示
+        function createFallbackProfitDisplay(pricePoints, totalShares, totalInvestment) {
+            const container = document.getElementById('profitChart').parentNode;
+            
+            // 清空容器
+            container.innerHTML = '<h4>盈亏曲线图 (备用表格显示)</h4>';
+            
+            // 创建备用表格
+            const table = document.createElement('table');
+            table.className = 'fallback-chart';
+            
+            // 表头
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th>股价</th>
+                    <th>总市值</th>
+                    <th>盈亏金额</th>
+                    <th>盈亏比例</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+            
+            // 表体
+            const tbody = document.createElement('tbody');
+            
+            // 添加几个关键价格点
+            const keyPoints = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]; // 索引，而不是实际值
+            
+            // 确保至少有20个点
+            const points = pricePoints.length >= 20 ? pricePoints : pricePoints.slice(0);
+            
+            keyPoints.forEach(index => {
+                if (index < points.length) {
+                    const price = points[index];
+                    const totalValue = totalShares * price;
+                    const profit = totalValue - totalInvestment;
+                    const profitPercentage = (profit / totalInvestment) * 100;
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${formatNumber(price)}</td>
+                        <td>${formatNumber(totalValue)}</td>
+                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${formatNumber(profit)}</td>
+                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${profitPercentage.toFixed(2)}%</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            });
+            
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+        
+        // 页面加载完成后检查Chart.js是否正确加载
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查Chart.js是否加载成功
+            if (typeof Chart === 'undefined') {
+                console.error("警告: Chart.js 未能正确加载，图表功能可能不可用");
+                alert("图表库加载失败，部分功能可能不可用。请确保您的网络连接正常并允许加载外部资源。");
+                
+                // 尝试再次加载Chart.js
+                var scriptChartJs = document.createElement('script');
+                scriptChartJs.src = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js";
+                scriptChartJs.onload = function() {
+                    console.log("Chart.js 通过备用CDN成功加载");
+                    // 如果用户已经输入数据并点击了分析按钮，则重新渲染图表
+                    if (document.getElementById('result').style.display === 'block') {
+                        calculateRestocking();
+                    }
+                };
+                document.head.appendChild(scriptChartJs);
+            } else {
+                console.log("Chart.js 已成功加载，版本:", Chart.version);
+            }
+            
+            // 确保按钮点击事件正确绑定
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            if (analyzeBtn) {
+                console.log("找到分析按钮，绑定点击事件");
+                // 移除原有可能的事件监听
+                analyzeBtn.removeEventListener('click', calculateRestocking);
+                // 添加新的事件监听
+                analyzeBtn.addEventListener('click', function() {
+                    console.log("按钮被点击，调用计算函数");
+                    
+                    // 显示结果面板
+                    document.getElementById('result').style.display = 'block';
+                    
+                    // 添加激活的左右布局样式
+                    document.querySelector('.container').classList.add('results-active');
+                    
+                    // 执行计算
+                    calculateRestocking();
+                });
+            } else {
+                console.error("未找到分析按钮");
+            }
+            
+            // 设置初始状态
+            document.getElementById('result').style.display = 'none';
+            
+            // 预填充表单，方便测试
+            document.getElementById('originalPrice').value = '100.00';
+            document.getElementById('originalShares').value = '100';
+            document.getElementById('currentPrice').value = '80.00';
+            document.getElementById('additionalFunds').value = '5000.00';
+        });
+    </script>
+</body>
+</html> 
