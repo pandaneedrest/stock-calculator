@@ -169,12 +169,23 @@
             margin-top: 15px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             font-size: 14px;
+            table-layout: fixed;
+            overflow-x: auto;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 15px;
         }
         
         th, td {
             border: 1px solid #ddd;
             padding: 10px;
             text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: break-word;
         }
         
         th {
@@ -258,6 +269,32 @@
             margin-bottom: 8px;
         }
         
+        /* 为价格情景表格设置列宽比例 */
+        .price-scenarios-table th:nth-child(1), 
+        .price-scenarios-table td:nth-child(1) {
+            width: 15%;
+        }
+        
+        .price-scenarios-table th:nth-child(2), 
+        .price-scenarios-table td:nth-child(2) {
+            width: 20%;
+        }
+        
+        .price-scenarios-table th:nth-child(3), 
+        .price-scenarios-table td:nth-child(3) {
+            width: 20%;
+        }
+        
+        .price-scenarios-table th:nth-child(4), 
+        .price-scenarios-table td:nth-child(4) {
+            width: 15%;
+        }
+        
+        .price-scenarios-table th:nth-child(5), 
+        .price-scenarios-table td:nth-child(5) {
+            width: 30%;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -280,6 +317,42 @@
             }
             .chart-container {
                 height: 250px;
+            }
+            
+            /* 移动设备上的表格优化 */
+            .price-scenarios-table {
+                font-size: 12px;
+            }
+            
+            .price-scenarios-table th,
+            .price-scenarios-table td {
+                padding: 8px 4px;
+            }
+            
+            /* 调整移动设备上的列宽 */
+            .price-scenarios-table th:nth-child(1), 
+            .price-scenarios-table td:nth-child(1) {
+                width: 18%;
+            }
+            
+            .price-scenarios-table th:nth-child(2), 
+            .price-scenarios-table td:nth-child(2) {
+                width: 20%;
+            }
+            
+            .price-scenarios-table th:nth-child(3), 
+            .price-scenarios-table td:nth-child(3) {
+                width: 18%;
+            }
+            
+            .price-scenarios-table th:nth-child(4), 
+            .price-scenarios-table td:nth-child(4) {
+                width: 14%;
+            }
+            
+            .price-scenarios-table th:nth-child(5), 
+            .price-scenarios-table td:nth-child(5) {
+                width: 30%;
             }
         }
     </style>
@@ -605,70 +678,73 @@
                 return avgCost * (1 + percentage / 100);
             });
             
-            // 添加到基础分析的HTML
-            priceScenarios.innerHTML += `
+            // 添加表格标题和表头
+            let scenariosHTML = `
                 <h4>价格情景分析</h4>
                 <p>以下表格展示了关键股价水平下的盈亏情况：</p>
                 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>股价（元）</th>
-                            <th>总市值（元）</th>
-                            <th>盈亏金额（元）</th>
-                            <th>盈亏比例</th>
-                            <th>情景描述</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div class="table-responsive">
+                    <table class="price-scenarios-table">
+                        <thead>
+                            <tr>
+                                <th>股价（元）</th>
+                                <th>总市值（元）</th>
+                                <th>盈亏金额（元）</th>
+                                <th>盈亏比例</th>
+                                <th>情景描述</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
             
             // 为每个价格点创建表格行
-            targetPrices.forEach(price => {
+            targetPrices.forEach((price, index) => {
                 const totalValue = totalShares * price;
                 const profit = totalValue - totalInvestment;
                 const profitPercentage = (profit / totalInvestment) * 100;
+                const percentage = targetProfitPercentages[index];
                 
                 // 设置情景描述
                 let scenarioDesc = '';
-                if (profitPercentage <= -30) {
+                if (percentage <= -30) {
                     scenarioDesc = '严重亏损';
-                } else if (profitPercentage <= -20) {
+                } else if (percentage <= -20) {
                     scenarioDesc = '重度亏损';
-                } else if (profitPercentage <= -10) {
-                    scenarioDesc = '中度亏损';
-                } else if (profitPercentage < -2) {
+                } else if (percentage <= -10) {
+                    scenarioDesc = '中度亏损'; 
+                } else if (percentage < -2) {
                     scenarioDesc = '轻度亏损';
-                } else if (profitPercentage < 0) {
+                } else if (percentage < 0) {
                     scenarioDesc = '接近盈亏平衡';
-                } else if (profitPercentage == 0) {
+                } else if (percentage == 0) {
                     scenarioDesc = '盈亏平衡点';
-                } else if (profitPercentage < 5) {
+                } else if (percentage < 5) {
                     scenarioDesc = '小幅盈利';
-                } else if (profitPercentage < 10) {
+                } else if (percentage < 10) {
                     scenarioDesc = '中等盈利';
-                } else if (profitPercentage < 20) {
+                } else if (percentage < 20) {
                     scenarioDesc = '较大盈利';
                 } else {
                     scenarioDesc = '高额盈利';
                 }
                 
                 // 生成表格行HTML
-                priceScenarios.innerHTML += `
+                scenariosHTML += `
                     <tr>
                         <td>${formatNumber(price)}</td>
                         <td>${formatNumber(totalValue)}</td>
                         <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${formatNumber(profit)}</td>
-                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${profitPercentage.toFixed(2)}%</td>
+                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${percentage.toFixed(2)}%</td>
                         <td>${scenarioDesc}</td>
                     </tr>
                 `;
             });
             
             // 表格尾部
-            priceScenarios.innerHTML += `
-                    </tbody>
-                </table>
+            scenariosHTML += `
+                        </tbody>
+                    </table>
+                </div>
             `;
             
             // 计算关键价格点的数值
@@ -677,7 +753,7 @@
             const stopLossPrice = avgCost * 0.8;
             
             // 添加额外的价格点分析说明
-            priceScenarios.innerHTML += `
+            scenariosHTML += `
                 <div style="margin-top: 20px;">
                     <h4>关键价格点分析</h4>
                     <ol class="key-points-list">
@@ -718,6 +794,9 @@
                     </ul>
                 </div>
             `;
+            
+            // 将所有HTML内容添加到基础分析区域
+            priceScenarios.innerHTML += scenariosHTML;
         }
         
         // 选取关键价格点函数
