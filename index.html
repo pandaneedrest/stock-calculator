@@ -295,6 +295,26 @@
             width: 30%;
         }
         
+        /* 盈亏平衡点高亮样式 */
+        .break-even-highlight {
+            background-color: #fff8e6 !important; /* 浅黄色背景 */
+            font-weight: bold;
+            border-left: 3px solid #ffc107; /* 左侧边框加粗并使用醒目颜色 */
+        }
+        
+        .break-even-highlight td {
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+        
+        .break-even-text {
+            color: #ff9800;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background-color: rgba(255, 152, 0, 0.1);
+        }
+        
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -710,7 +730,7 @@
                 } else if (percentage < 0) {
                     scenarioDesc = '接近盈亏平衡';
                 } else if (percentage == 0) {
-                    scenarioDesc = '盈亏平衡点';
+                    scenarioDesc = '<span class="break-even-text">盈亏平衡点</span>';
                 } else if (percentage < 5) {
                     scenarioDesc = '小幅盈利';
                 } else if (percentage < 10) {
@@ -723,7 +743,7 @@
                 
                 // 生成表格行HTML
                 scenariosHTML += `
-                    <tr>
+                    <tr${percentage == 0 ? ' class="break-even-highlight"' : ''}>
                         <td>${formatNumber(price)}</td>
                         <td>${formatNumber(totalValue)}</td>
                         <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${formatNumber(profit)}</td>
@@ -1047,40 +1067,62 @@
                     return;
                 }
                 
+                // 计算指定价格点下的盈亏值
+                const profitValues = pricePoints.map(price => {
+                    const totalValue = price * totalShares;
+                    return totalValue - totalInvestment;
+                });
+                
                 // 销毁之前的图表（如果存在）
                 if (window.profitChart instanceof Chart) {
                     window.profitChart.destroy();
                 }
                 
-                console.log("创建盈亏曲线图", {totalShares, totalInvestment});
+                console.log("创建盈亏曲线图", {pricePoints: pricePoints.length, totalShares, totalInvestment});
                 
-                // 计算新的价格区间点（从-50%到+50%，颗粒度2%）
-                const avgCost = totalInvestment / totalShares;
-                const percentages = [];
-                for (let i = -50; i <= 50; i += 2) {
-                    percentages.push(i);
+                // 找到盈亏平衡点的索引
+                let breakEvenIndex = 0;
+                for (let i = 0; i < profitValues.length; i++) {
+                    if (profitValues[i] >= 0) {
+                        breakEvenIndex = i;
+                        break;
+                    }
                 }
                 
-                const chartPrices = percentages.map(percentage => {
-                    return avgCost * (1 + percentage / 100);
-                });
+                // 筛选价格点，避免图表过于拥挤
+                let filteredPricePoints = [];
+                let filteredProfitValues = [];
                 
-                // 计算每个价格点的盈亏值
-                const profitValues = chartPrices.map(price => {
-                    const totalValue = price * totalShares;
-                    return totalValue - totalInvestment;
-                });
+                // 根据数据量进行抽样，最多显示15个点
+                const step = Math.max(1, Math.floor(pricePoints.length / 15));
+                for (let i = 0; i < pricePoints.length; i += step) {
+                    filteredPricePoints.push(pricePoints[i]);
+                    filteredProfitValues.push(profitValues[i]);
+                }
                 
-                // 找到盈亏平衡点的索引（0%）
-                const breakEvenIndex = percentages.indexOf(0);
+                // 确保包含盈亏平衡点
+                if (!filteredPricePoints.includes(pricePoints[breakEvenIndex])) {
+                    filteredPricePoints.push(pricePoints[breakEvenIndex]);
+                    filteredProfitValues.push(profitValues[breakEvenIndex]);
+                    
+                    // 重新排序
+                    const combinedArray = filteredPricePoints.map((price, i) => {
+                        return { price: price, profit: filteredProfitValues[i] };
+                    });
+                    
+                    combinedArray.sort((a, b) => a.price - b.price);
+                    
+                    filteredPricePoints = combinedArray.map(item => item.price);
+                    filteredProfitValues = combinedArray.map(item => item.profit);
+                }
                 
                 window.profitChart = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: chartPrices.map((price, index) => `${price.toFixed(2)} (${percentages[index]}%)`),
+                        labels: filteredPricePoints.map(price => price.toFixed(2)),
                         datasets: [{
                             label: '盈亏金额（元）',
-                            data: profitValues,
+                            data: filteredProfitValues,
                             borderColor: 'rgba(75, 192, 192, 1)',
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
                             pointBackgroundColor: function(context) {
@@ -1110,8 +1152,7 @@
                                 enabled: true,
                                 callbacks: {
                                     title: function(context) {
-                                        const index = context[0].dataIndex;
-                                        return `股价: ${chartPrices[index].toFixed(2)} 元 (${percentages[index]}%)`;
+                                        return `股价: ${context[0].label} 元`;
                                     },
                                     label: function(context) {
                                         const profit = context.parsed.y;
@@ -1141,11 +1182,6 @@
                             },
                             x: {
                                 ticks: {
-                                    // 只显示部分标签，避免拥挤
-                                    callback: function(value, index, values) {
-                                        // 每5个点显示一个标签
-                                        return index % 5 === 0 ? chartPrices[index].toFixed(2) : '';
-                                    },
                                     maxRotation: 45,
                                     minRotation: 45
                                 }
@@ -1175,7 +1211,6 @@
             thead.innerHTML = `
                 <tr>
                     <th>股价</th>
-                    <th>百分比</th>
                     <th>总市值</th>
                     <th>盈亏金额</th>
                     <th>盈亏比例</th>
@@ -1186,25 +1221,28 @@
             // 表体
             const tbody = document.createElement('tbody');
             
-            // 计算价格区间点（从-50%到+50%，颗粒度10%，显示更少行以适应表格）
-            const avgCost = totalInvestment / totalShares;
-            const keyPercentages = [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50];
+            // 添加几个关键价格点
+            const keyPoints = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]; // 索引，而不是实际值
             
-            keyPercentages.forEach(percentage => {
-                const price = avgCost * (1 + percentage / 100);
-                const totalValue = totalShares * price;
-                const profit = totalValue - totalInvestment;
-                const profitPercentage = (profit / totalInvestment) * 100;
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${formatNumber(price)}</td>
-                    <td>${percentage}%</td>
-                    <td>${formatNumber(totalValue)}</td>
-                    <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${formatNumber(profit)}</td>
-                    <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${profitPercentage.toFixed(2)}%</td>
-                `;
-                tbody.appendChild(tr);
+            // 确保至少有20个点
+            const points = pricePoints.length >= 20 ? pricePoints : pricePoints.slice(0);
+            
+            keyPoints.forEach(index => {
+                if (index < points.length) {
+                    const price = points[index];
+                    const totalValue = totalShares * price;
+                    const profit = totalValue - totalInvestment;
+                    const profitPercentage = (profit / totalInvestment) * 100;
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${formatNumber(price)}</td>
+                        <td>${formatNumber(totalValue)}</td>
+                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${formatNumber(profit)}</td>
+                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${profitPercentage.toFixed(2)}%</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
             });
             
             table.appendChild(tbody);
