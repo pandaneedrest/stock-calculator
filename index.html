@@ -315,6 +315,13 @@
             background-color: rgba(255, 152, 0, 0.1);
         }
         
+        .small-text {
+            font-size: 12px;
+            opacity: 0.8;
+            display: block;
+            margin-top: 2px;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -759,7 +766,10 @@
                     <tr${percentage == 0 ? ' class="break-even-highlight"' : ''}>
                         <td>${formatNumber(price)}</td>
                         <td>${formatNumber(totalValue)}</td>
-                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${formatNumber(profit)}</td>
+                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">
+                            ${formatNumber(profit)}
+                            <span class="small-text${initialProfit < 0 ? ' profit-negative' : ' profit-positive'}">含初始${initialProfit < 0 ? '亏损' : '盈利'}: ${formatNumber(Math.abs(initialProfit))}</span>
+                        </td>
                         <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${percentage.toFixed(2)}%</td>
                         <td>${scenarioDesc}</td>
                     </tr>
