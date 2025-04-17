@@ -584,7 +584,7 @@
                                 averageCost, breakEvenPrice, profitAt10Percent);
                 
                 // 填充价格情景区域
-                fillPriceScenarios(pricePoints, originalShares, additionalShares, initialInvestment, additionalInvestment, totalShares, totalInvestment);
+                fillPriceScenarios(pricePoints, originalShares, additionalShares, initialInvestment, additionalInvestment, totalShares, totalInvestment, currentPrice);
                 
                 try {
                     console.log("开始绘制图表...");
@@ -695,7 +695,7 @@
         }
         
         // 填充价格情景区域
-        function fillPriceScenarios(pricePoints, originalShares, additionalShares, initialInvestment, additionalInvestment, totalShares, totalInvestment) {
+        function fillPriceScenarios(pricePoints, originalShares, additionalShares, initialInvestment, additionalInvestment, totalShares, totalInvestment, currentPrice) {
             const priceScenarios = document.getElementById('basic-analysis');
             
             // 计算关键价格点
@@ -718,10 +718,10 @@
                         <thead>
                             <tr>
                                 <th>股价（元）</th>
-                                <th>距当前涨跌</th>
+                                <th>盈亏比例</th>
                                 <th>总市值（元）</th>
                                 <th>盈亏金额（元）</th>
-                                <th>盈亏比例</th>
+                                <th>距当前涨跌</th>
                                 <th>情景描述</th>
                             </tr>
                         </thead>
@@ -780,13 +780,13 @@
                 scenariosHTML += `
                     <tr${percentage == 0 ? ' class="break-even-highlight"' : ''}>
                         <td>${formatNumber(price)}</td>
-                        <td class="${isPriceUp ? 'profit-positive' : 'profit-negative'}">${priceChangePercent}%</td>
+                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${percentage.toFixed(2)}%</td>
                         <td>${formatNumber(totalValue)}</td>
                         <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">
                             ${formatNumber(profit)}
                             <span class="small-text${initialProfit < 0 ? ' profit-negative' : ' profit-positive'}">含初始${initialProfit < 0 ? '亏损' : '盈利'}: ${formatNumber(Math.abs(initialProfit))}</span>
                         </td>
-                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${percentage.toFixed(2)}%</td>
+                        <td class="${isPriceUp ? 'profit-positive' : 'profit-negative'}">${priceChangePercent}%</td>
                         <td>${scenarioDesc}</td>
                     </tr>
                 `;
