@@ -217,30 +217,30 @@
         
         /* 飞书风格盈亏平衡点高亮 */
         .break-even-highlight {
-            background-color: rgba(26, 115, 232, 0.05) !important;
+            background-color: rgba(26, 115, 232, 0.08) !important;
             position: relative;
         }
         
-        .break-even-highlight::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background-color: #1a73e8;
+        .break-even-highlight td {
+            color: #1a73e8;
+            font-weight: 500;
+            background-color: rgba(26, 115, 232, 0.08) !important;
         }
         
-        .break-even-highlight td {
-            background-color: transparent;
+        .break-even-highlight td:first-child {
+            border-left: 3px solid #1a73e8;
+        }
+        
+        .break-even-highlight td:last-child {
+            border-right: none;
         }
         
         .break-even-text {
-            color: #1a73e8;
-            font-weight: 500;
-            padding: 2px 8px;
+            background-color: rgba(26, 115, 232, 0.15);
+            padding: 3px 8px;
             border-radius: 4px;
-            background-color: rgba(26, 115, 232, 0.1);
+            font-weight: 500;
+            white-space: nowrap;
         }
         
         .chart-container {
@@ -304,6 +304,11 @@
         }
         
         /* 为价格情景表格设置列宽比例 */
+        .price-scenarios-table {
+            width: 100%;
+            table-layout: fixed;
+        }
+        
         .price-scenarios-table th:nth-child(1), 
         .price-scenarios-table td:nth-child(1) {
             width: 12%;
@@ -862,19 +867,37 @@
                 }
                 
                 // 生成表格行HTML
-                scenariosHTML += `
-                    <tr${percentage == 0 ? ' class="break-even-highlight"' : ''}>
-                        <td>${formatNumber(price)}</td>
-                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${percentage.toFixed(2)}%</td>
-                        <td>${formatNumber(totalValue)}</td>
-                        <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">
-                            ${formatNumber(profit)}
-                            <span class="small-text${initialProfit < 0 ? ' profit-negative' : ' profit-positive'}">含初始${initialProfit < 0 ? '亏损' : '盈利'}: ${formatNumber(Math.abs(initialProfit))}</span>
-                        </td>
-                        <td class="${isPriceUp ? 'profit-positive' : 'profit-negative'}">${priceChangePercent}%</td>
-                        <td>${scenarioDesc}</td>
-                    </tr>
-                `;
+                if (percentage == 0) {
+                    // 盈亏平衡点行
+                    scenariosHTML += `
+                        <tr class="break-even-highlight">
+                            <td>${formatNumber(price)}</td>
+                            <td class="profit-positive">${percentage.toFixed(2)}%</td>
+                            <td>${formatNumber(totalValue)}</td>
+                            <td class="profit-positive">
+                                ${formatNumber(profit)}
+                                <span class="small-text${initialProfit < 0 ? ' profit-negative' : ' profit-positive'}">含初始${initialProfit < 0 ? '亏损' : '盈利'}: ${formatNumber(Math.abs(initialProfit))}</span>
+                            </td>
+                            <td class="${isPriceUp ? 'profit-positive' : 'profit-negative'}">${priceChangePercent}%</td>
+                            <td><span class="break-even-text">盈亏平衡点</span></td>
+                        </tr>
+                    `;
+                } else {
+                    // 普通行
+                    scenariosHTML += `
+                        <tr>
+                            <td>${formatNumber(price)}</td>
+                            <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${percentage.toFixed(2)}%</td>
+                            <td>${formatNumber(totalValue)}</td>
+                            <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">
+                                ${formatNumber(profit)}
+                                <span class="small-text${initialProfit < 0 ? ' profit-negative' : ' profit-positive'}">含初始${initialProfit < 0 ? '亏损' : '盈利'}: ${formatNumber(Math.abs(initialProfit))}</span>
+                            </td>
+                            <td class="${isPriceUp ? 'profit-positive' : 'profit-negative'}">${priceChangePercent}%</td>
+                            <td>${scenarioDesc}</td>
+                        </tr>
+                    `;
+                }
             });
             
             // 表格尾部
