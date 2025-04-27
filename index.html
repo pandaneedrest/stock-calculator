@@ -633,13 +633,13 @@
             </div>
             
             <div class="form-group">
-                <label for="originalShares">初始买入股数</label>
-                <input type="number" id="originalShares" placeholder="例如: 100">
+                <label for="currentPrice">当前股价（元/股）</label>
+                <input type="number" id="currentPrice" step="0.01" placeholder="例如: 80.00">
             </div>
             
             <div class="form-group">
-                <label for="currentPrice">当前股价（元/股）</label>
-                <input type="number" id="currentPrice" step="0.01" placeholder="例如: 80.00">
+                <label for="originalShares">持仓股数</label>
+                <input type="number" id="originalShares" placeholder="例如: 100">
             </div>
             
             <div class="form-group">
@@ -739,8 +739,8 @@
 
 【基础数据】
 - 成本价格: ${originalPrice} 元/股
-- 初始买入股数: ${originalShares} 股 
 - 当前股价: ${currentPrice} 元/股
+- 持仓股数: ${originalShares} 股 
 - 计划追加资金: ${additionalFunds} 元
 
 【分析需求】
