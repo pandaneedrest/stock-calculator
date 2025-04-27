@@ -628,7 +628,7 @@
                 输入持仓信息
             </h2>
             <div class="form-group">
-                <label for="originalPrice">初始买入价格（元/股）</label>
+                <label for="originalPrice">成本价格（元/股）</label>
                 <input type="number" id="originalPrice" step="0.01" placeholder="例如: 100.00">
             </div>
             
@@ -738,7 +738,7 @@
             const prompt = `请对以下股票补仓方案进行分析：
 
 【基础数据】
-- 初始买入价格: ${originalPrice} 元/股
+- 成本价格: ${originalPrice} 元/股
 - 初始买入股数: ${originalShares} 股 
 - 当前股价: ${currentPrice} 元/股
 - 计划追加资金: ${additionalFunds} 元
